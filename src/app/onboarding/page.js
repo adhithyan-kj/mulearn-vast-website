@@ -1,15 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { useState } from "react";
 
 export default function OnboardingPage() {
-  const [isLogin, setIsLogin] = useState(true); // State to switch between Login and Sign Up
+  const [isLogin, setIsLogin] = useState(true);
 
-  // Helper component for common form inputs
+  // Better Form Input Component
   const FormInput = ({ id, label, type = "text", required = true }) => (
-    <div className="mb-4">
+    <div className="mb-5">
       <label
         htmlFor={id}
-        className="block text-sm font-medium text-gray-700 mb-1"
+        className="block text-sm font-semibold text-gray-700 mb-2"
       >
         {label}
       </label>
@@ -18,97 +20,109 @@ export default function OnboardingPage() {
         id={id}
         name={id}
         required={required}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition duration-150"
+        placeholder={`Enter your ${label.toLowerCase()}`}
+        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all shadow-sm"
       />
     </div>
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="w-full max-w-md bg-white p-8 shadow-2xl rounded-xl">
-        {/* Title and Switcher */}
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-purple-400/20 blur-3xl"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400/20 blur-3xl"></div>
+      </div>
+
+      <div className="w-full max-w-md bg-white/80 backdrop-blur-xl p-8 sm:p-10 shadow-2xl rounded-3xl border border-white/50 relative z-10">
+        {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            {isLogin ? "Login" : "Sign Up"}
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-purple-600 text-white font-bold text-xl mb-4 shadow-lg shadow-purple-200">
+            M
+          </div>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+            {isLogin ? "Welcome Back" : "Join Community"}
           </h1>
-          <p className="text-sm text-gray-500">
-            {isLogin ? "Don't have an account?" : "Already have an account?"}
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="ml-1 font-semibold text-purple-600 hover:text-purple-700 transition duration-150"
-            >
-              {isLogin ? "Sign Up" : "Login"}
-            </button>
+          <p className="text-gray-500 mt-2 text-sm">
+            {isLogin
+              ? "Enter your details to access your dashboard."
+              : "Start your journey with MuLearn VAST."}
           </p>
         </div>
 
+        {/* Toggle Buttons */}
+        <div className="flex bg-gray-100 p-1 rounded-xl mb-8">
+          <button
+            onClick={() => setIsLogin(true)}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+              isLogin
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Login
+          </button>
+          <button
+            onClick={() => setIsLogin(false)}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+              !isLogin
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Sign Up
+          </button>
+        </div>
+
         <form>
-          {/* --- Option A: Sign Up Fields --- */}
           {!isLogin && (
             <>
-              [cite_start]
-              <FormInput id="name" label="Name" /> {/* [cite: 16] */}
-              [cite_start]
-              <FormInput id="email-signup" label="Email" type="email" />{" "}
-              {/* [cite: 17] */}
-              [cite_start]
-              <FormInput id="department" label="Department / Batch" />{" "}
-              {/* [cite: 18] */}
-              [cite_start]
-              <FormInput
-                id="password-signup"
-                label="Password"
-                type="password"
-              />{" "}
-              {/* [cite: 19] */}
-              <button
-                type="submit"
-                className="w-full mt-6 px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition duration-300 shadow-md"
-              >
-                Create Account
-              </button>
+              <FormInput id="name" label="Full Name" />
+              <FormInput id="department" label="Department / Batch" />
             </>
           )}
 
-          {/* --- Option B: Login Fields --- */}
+          <FormInput id="email" label="Email Address" type="email" />
+          <FormInput id="password" label="Password" type="password" />
+
           {isLogin && (
-            <>
-              [cite_start]
-              <FormInput id="email-login" label="Email" type="email" />{" "}
-              {/* [cite: 21] */}
-              [cite_start]
-              <FormInput
-                id="password-login"
-                label="Password"
-                type="password"
-              />{" "}
-              {/* [cite: 22] */}
-              <div className="text-right mb-6">
-                {/* Forgot Password link */}
-                <Link
-                  href="#"
-                  className="text-sm text-purple-600 hover:text-purple-700 transition duration-150"
-                >
-                  Forgot Password? [cite_start]{/* [cite: 23] */}
-                </Link>
-              </div>
-              <button
-                type="submit"
-                className="w-full px-4 py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition duration-300 shadow-md"
+            <div className="text-right mb-6">
+              <Link
+                href="#"
+                className="text-xs font-semibold text-purple-600 hover:text-purple-800 transition-colors"
               >
-                Login
-              </button>
-            </>
+                Forgot Password?
+              </Link>
+            </div>
           )}
+
+          <button
+            type="submit"
+            className="w-full py-3.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 hover:shadow-lg transform active:scale-95 transition-all duration-200"
+          >
+            {isLogin ? "Sign In" : "Create Account"}
+          </button>
         </form>
 
-        {/* Back to Home Link */}
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center pt-6 border-t border-gray-100">
           <Link
             href="/"
-            className="text-sm text-gray-500 hover:text-gray-700 transition duration-150"
+            className="inline-flex items-center text-sm text-gray-500 hover:text-purple-600 font-medium transition-colors"
           >
-            &larr; Back to Home
+            <svg
+              className="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              ></path>
+            </svg>
+            Back to Home
           </Link>
         </div>
       </div>
