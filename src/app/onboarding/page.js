@@ -3,8 +3,30 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { useRouter } from "next/navigation";
+
 export default function OnboardingPage() {
   const [isLogin, setIsLogin] = useState(true);
+
+  // Inside export default function OnboardingPage() { ...
+
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false); // <-- Ensure this is also added
+
+  const handleLogin = (e) => {
+    // <-- THIS IS THE MISSING FUNCTION
+    e.preventDefault();
+
+    if (isLogin) {
+      setIsLoading(true);
+      // Mock API call delay
+      setTimeout(() => {
+        router.push("/dashboard"); // Redirect to dashboard
+      }, 500);
+    }
+  };
+
+  // ... rest of your component (like FormInput, return, etc.) follows ...
 
   // Better Form Input Component
   const FormInput = ({ id, label, type = "text", required = true }) => (
@@ -74,7 +96,7 @@ export default function OnboardingPage() {
           </button>
         </div>
 
-        <form>
+        <form onSubmit={handleLogin}>
           {!isLogin && (
             <>
               <FormInput id="name" label="Full Name" />
@@ -98,6 +120,7 @@ export default function OnboardingPage() {
 
           <button
             type="submit"
+            disabled={isLoading}
             className="w-full py-3.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 hover:shadow-lg transform active:scale-95 transition-all duration-200"
           >
             {isLogin ? "Sign In" : "Create Account"}
