@@ -1,185 +1,219 @@
+// src/app/dashboard/page.js
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { Zap, CheckCircle, Award, ListChecks, ArrowRight } from "lucide-react"; // Added ArrowRight and ListChecks for recommended tasks
 
-const mockTasks = [
-  {
-    id: 101,
-    title: "Github Basics Setup",
-    desc: "Create a repo and push code.",
-    category: "Tech",
-    difficulty: "Easy",
-    score: 25,
-    color: "bg-blue-50 text-blue-700 border-blue-200",
-  },
-  {
-    id: 102,
-    title: "Financial Literacy",
-    desc: "Summarize finance concepts.",
-    category: "Social",
-    difficulty: "Medium",
-    score: 75,
-    color: "bg-green-50 text-green-700 border-green-200",
-  },
-  {
-    id: 103,
-    title: "Promo Video Creation",
-    desc: "Make a 30s promo reel.",
-    category: "Creative",
-    difficulty: "Hard",
-    score: 150,
-    color: "bg-purple-50 text-purple-700 border-purple-200",
-  },
-];
+// ----------------------------------------------------
+// 1. MAIN COMPONENT (Dashboard Layout)
+// ----------------------------------------------------
 
-const Lobby = () => (
-  <div className="space-y-6 animate-fade-in">
-    {/* Welcome Banner */}
-    <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg shadow-purple-200">
-      <h2 className="text-2xl font-bold mb-2">Welcome back, Adithyan! 🚀</h2>
-      <p className="opacity-90">
-        You have 2 pending tasks and 1 mentor request. Let's make some impact
-        today.
-      </p>
-    </div>
+export default function DashboardPage() {
+  return (
+    <div className="space-y-10 animate-fade-in">
+      {/* 💥 Section 1: Welcome Banner (Refined Shadow and Glow) */}
+      <WelcomeBanner name="Adithyan" />
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Dynamic Message Panel */}
-      <div className="p-6 bg-white/60 backdrop-blur-md border border-white/50 rounded-2xl shadow-sm hover:shadow-md transition-all">
-        <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
-          <span className="text-xl">📢</span> Updates
-        </h3>
-        <p className="text-sm text-gray-600 leading-relaxed">
-          New "Finance Basics" task added to the library. Check it out to boost
-          your social impact score!
-        </p>
-      </div>
+      {/* 2. Overview Section */}
+      <section>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">
+          Your Impact Overview
+        </h2>
 
-      {/* Impact Score Alert */}
-      <div className="p-6 bg-white/60 backdrop-blur-md border border-white/50 rounded-2xl shadow-sm hover:shadow-md transition-all">
-        <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
-          <span className="text-xl">🔥</span> Impact Streak
-        </h3>
-        <p className="text-sm text-gray-600">
-          You just crossed the{" "}
-          <span className="font-bold text-green-600">500 Point Milestone</span>.
-          Keep the momentum going!
-        </p>
-      </div>
-    </div>
-  </div>
-);
-
-const TaskLibrary = () => (
-  <div className="space-y-4 animate-fade-in">
-    <h2 className="text-xl font-bold text-gray-800 mb-4 px-1">
-      Available Tasks
-    </h2>
-    {mockTasks.map((task) => (
-      <div
-        key={task.id}
-        className="group p-5 bg-white/70 backdrop-blur-sm border border-white/60 rounded-2xl shadow-sm hover:shadow-lg hover:scale-[1.01] transition-all duration-300"
-      >
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span
-                className={`px-2 py-0.5 rounded-full text-xs font-bold border ${task.color} bg-opacity-50`}
-              >
-                {task.category}
-              </span>
-              <span className="text-xs text-gray-400 font-medium tracking-wide uppercase">
-                {task.difficulty}
-              </span>
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 group-hover:text-purple-700 transition-colors">
-              {task.title}
-            </h3>
-            <p className="text-sm text-gray-500 mt-1">{task.desc}</p>
-          </div>
-          <div className="text-right">
-            <span className="block text-xl font-extrabold text-gray-800">
-              {task.score}
-            </span>
-            <span className="text-xs text-gray-400">Points</span>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <StatCard
+            label="Total Impact Score"
+            value="3,200"
+            icon={<Zap size={24} />}
+            gradient="from-purple-600 to-indigo-500"
+          />
+          <StatCard
+            label="Tasks Completed"
+            value="12"
+            icon={<CheckCircle size={24} />}
+            gradient="from-blue-600 to-cyan-500"
+          />
+          <StatCard
+            label="Global Rank"
+            value="#42"
+            icon={<Award size={24} />}
+            gradient="from-emerald-500 to-green-600"
+          />
         </div>
-        <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+      </section>
+
+      {/* 3. Current Path Progress */}
+      <section>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Current Path</h2>
+        <ProgressCard
+          progress={40}
+          path="Frontend Developer Path"
+          level="Level 4 - React Fundamentals"
+        />
+      </section>
+
+      {/* 4. Recommended Tasks (Using the TaskCard style) */}
+      <section>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Recommended Tasks</h2>
           <Link
-            href={`/dashboard/tasks/${task.id}`}
-            className="text-sm font-semibold text-purple-600 hover:text-purple-800 transition-colors flex items-center gap-1"
+            href="/dashboard/tasks"
+            className="text-sm font-semibold text-purple-600 hover:text-purple-700 transition-colors flex items-center gap-1"
           >
-            View Details <span className="text-lg">&rarr;</span>
+            View All Tasks <ArrowRight size={16} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <TaskCard
+            title="Build a Resume Site"
+            difficulty="EASY"
+            score="150"
+            desc="Create a responsive portfolio using HTML & CSS basics."
+            tagColor="bg-green-100 text-green-700 border-green-200"
+          />
+          <TaskCard
+            title="JS Calculator"
+            difficulty="MEDIUM"
+            score="300"
+            desc="Build a functional calculator with DOM manipulation."
+            tagColor="bg-yellow-100 text-yellow-700 border-yellow-200"
+          />
+          <TaskCard
+            title="Weather API App"
+            difficulty="HARD"
+            score="500"
+            desc="Fetch data from a public API and display weather info."
+            tagColor="bg-red-100 text-red-700 border-red-200"
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ----------------------------------------------------
+// 2. HELPER COMPONENTS
+// ----------------------------------------------------
+
+// Welcome Banner component
+function WelcomeBanner({ name }) {
+  return (
+    <div className="p-8 rounded-3xl bg-white/70 backdrop-blur-xl shadow-xl border border-white/70 relative overflow-hidden group">
+      {/* Subtle Glowing Background Effect */}
+      <div className="absolute top-[-20px] left-[-20px] w-48 h-48 bg-purple-300/30 rounded-full blur-3xl opacity-50 group-hover:opacity-70 transition-opacity duration-500"></div>
+      <div className="absolute bottom-[-20px] right-[-20px] w-48 h-48 bg-blue-300/30 rounded-full blur-3xl opacity-50 group-hover:opacity-70 transition-opacity duration-500"></div>
+
+      {/* Content */}
+      <div className="relative z-10">
+        <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
+          Hello,{" "}
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-blue-600">
+            {name}!
+          </span>{" "}
+          🚀
+        </h2>
+        <p className="text-gray-600 mb-4 max-w-lg">
+          You are currently ranked **#42**. Keep completing tasks to climb the
+          leaderboard!
+        </p>
+
+        <div className="mt-6 flex flex-wrap gap-4">
+          <Link
+            href="/dashboard/tasks"
+            className="px-5 py-2.5 bg-purple-600 text-white text-sm font-bold rounded-xl hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200/50"
+          >
+            Start New Task
+          </Link>
+          <Link
+            href="/dashboard/leaderboard"
+            className="px-5 py-2.5 bg-white text-gray-700 text-sm font-bold rounded-xl border border-gray-300 hover:bg-gray-50 transition-colors shadow-md"
+          >
+            View Ranks
           </Link>
         </div>
       </div>
-    ))}
-  </div>
-);
-
-// Leaderboard component placeholder
-const Leaderboard = () => (
-  <div className="bg-white/70 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-white/50 animate-fade-in">
-    <div className="text-center py-10">
-      <div className="text-4xl mb-3">🏆</div>
-      <h3 className="text-lg font-bold text-gray-800">Leaderboard</h3>
-      <p className="text-gray-500 text-sm">Rankings update every 6 hours.</p>
     </div>
-  </div>
-);
+  );
+}
 
-export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState("lobby");
-
-  const tabs = [
-    { id: "lobby", label: "Lobby", icon: "🏠" },
-    { id: "tasks", label: "Tasks", icon: "📚" },
-    { id: "leaderboard", label: "Ranks", icon: "🏆" },
-    { id: "profile", label: "Profile", icon: "👤" },
-  ];
-
+// Stats Card
+function StatCard({ label, value, icon, gradient }) {
   return (
-    <div className="min-h-screen p-4 sm:p-6 pb-20">
-      <header className="mb-8 flex justify-between items-end">
+    <div className="bg-white/70 backdrop-blur-xl border border-white/60 p-6 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 group">
+      <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500">Overview</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+            {label}
+          </p>
+          <p
+            className={`text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r ${gradient}`}
+          >
+            {value}
+          </p>
         </div>
-      </header>
+        <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-purple-600 shadow-inner group-hover:bg-purple-100 transition-colors">
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-      {/* Modern Navigation Tabs */}
-      <div className="flex p-1 bg-white/40 backdrop-blur-md rounded-xl mb-8 border border-white/40 overflow-x-auto">
-        {tabs.map((tab) =>
-          tab.id === "profile" ? (
-            <Link
-              key={tab.id}
-              href="/dashboard/profile"
-              className="flex-1 min-w-[80px] py-2.5 text-sm font-medium rounded-lg text-gray-500 hover:text-gray-900 hover:bg-white/50 transition-all text-center"
-            >
-              <span className="mr-1">{tab.icon}</span> {tab.label}
-            </Link>
-          ) : (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 min-w-[80px] py-2.5 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2
-                    ${
-                      activeTab === tab.id
-                        ? "bg-white text-purple-700 shadow-sm ring-1 ring-black/5"
-                        : "text-gray-500 hover:text-gray-900 hover:bg-white/50"
-                    }`}
-            >
-              <span>{tab.icon}</span> {tab.label}
-            </button>
-          )
-        )}
+// Progress Card
+function ProgressCard({ progress, path, level }) {
+  return (
+    <div className="bg-white/70 backdrop-blur-xl border border-white/50 p-8 rounded-3xl shadow-lg relative overflow-hidden group">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-purple-200/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-300/30 transition-all duration-700"></div>
+
+      <div className="flex justify-between items-end mb-4 relative z-10">
+        <div>
+          <h3 className="text-lg font-bold text-gray-800">{path}</h3>
+          <p className="text-sm text-gray-500 mt-1">{level}</p>
+        </div>
+        <span className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">
+          {progress}%
+        </span>
       </div>
 
-      <div className="max-w-4xl mx-auto">
-        {activeTab === "lobby" && <Lobby />}
-        {activeTab === "tasks" && <TaskLibrary />}
-        {activeTab === "leaderboard" && <Leaderboard />}
+      {/* Glassy Progress Bar */}
+      <div className="w-full bg-gray-200/50 rounded-full h-4 overflow-hidden backdrop-blur-sm">
+        <div
+          className="bg-gradient-to-r from-purple-600 to-blue-500 h-full rounded-full shadow-inner shadow-purple-300 transition-all duration-1000 ease-out"
+          style={{ width: `${progress}%` }}
+        ></div>
+      </div>
+    </div>
+  );
+}
+
+// TaskCard (Used for Recommended Tasks section)
+function TaskCard({ title, difficulty, score, desc, tagColor }) {
+  return (
+    <div className="bg-white/70 backdrop-blur-md border border-white/60 p-6 rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col group">
+      <div className="flex justify-between items-start mb-3">
+        <h4 className="text-lg font-bold text-gray-900 group-hover:text-purple-700 transition-colors">
+          {title}
+        </h4>
+        <span
+          className={`text-[10px] font-bold px-2 py-1 rounded-full border ${tagColor}`}
+        >
+          {difficulty}
+        </span>
+      </div>
+
+      <p className="text-gray-500 text-sm mb-6 flex-grow leading-relaxed">
+        {desc}
+      </p>
+
+      <div className="flex justify-between items-center mt-auto pt-4 border-t border-gray-100">
+        <div className="flex items-center gap-1">
+          <span className="text-lg font-bold text-gray-800">{score}</span>
+          <span className="text-xs text-gray-400 font-medium">XP</span>
+        </div>
+        <button className="text-sm font-semibold text-white bg-gray-900 px-5 py-2 rounded-xl shadow-lg hover:bg-purple-600 hover:shadow-purple-200 transition-all duration-200 transform active:scale-95">
+          Start Task
+        </button>
       </div>
     </div>
   );
