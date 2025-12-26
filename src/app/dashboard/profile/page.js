@@ -1,181 +1,244 @@
-// src/app/dashboard/profile/page.js
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-// CORRECTED IMPORT: Medal is now included here.
+import { db } from "@/lib/firebase";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import {
   Mail,
-  Briefcase,
   Zap,
   Trophy,
   TrendingUp,
-  Github,
-  ExternalLink,
   GraduationCap,
-  Code,
-  Medal,
+  Loader2,
+  Check,
+  X,
+  Edit2,
+  Sparkles,
+  ChevronRight,
+  Award,
+  BookOpen,
 } from "lucide-react";
 
-// Mock data for the Profile
-const mockProfileData = {
-  name: "Adithyan V.",
-  stream: "EE 2024",
-  college: "College of Engineering, Trivandrum",
-  impactScore: 6850,
-  globalRank: 42,
-  badges: [
-    {
-      name: "First Contribution",
-      color: "bg-yellow-500",
-      icon: <Trophy size={18} />,
-    },
-    {
-      name: "Backend Fundementals",
-      color: "bg-green-500",
-      icon: <Code size={18} />,
-    },
-    { name: "Git Guru", color: "bg-purple-500", icon: <Github size={18} /> },
-    {
-      name: "Frontend Warrior",
-      color: "bg-blue-500",
-      icon: <Briefcase size={18} />,
-    },
-  ],
-  achievements: [
-    { title: "React Basics", progress: 90, level: "Advanced" },
-    { title: "Node.js API", progress: 75, level: "Intermediate" },
-    { title: "Design Thinking", progress: 50, level: "Beginner" },
-  ],
-  contact: [
-    { type: "Email", value: "adithyan.v@vast.edu", icon: <Mail size={18} /> },
-    { type: "GitHub", value: "adithyan-dev", icon: <Github size={18} /> },
-  ],
-};
-
 export default function ProfilePage() {
-  const user = mockProfileData;
+  const router = useRouter();
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) return;
+
+      const { email } = JSON.parse(storedUser);
+      const userRef = doc(db, "users", email);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        setUserData(data);
+        setNewName(data.displayName);
+      } else {
+        // Fallback to local storage if doc isn't created yet
+        setUserData(JSON.parse(storedUser));
+      }
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveName = async () => {
+    if (!newName.trim()) return;
+    setSaving(true);
+    try {
+      const userRef = doc(db, "users", userData.email);
+      await updateDoc(userRef, { displayName: newName });
+
+      setUserData({ ...userData, displayName: newName });
+
+      // Update localStorage so the layout navigation updates immediately
+      const localUser = JSON.parse(localStorage.getItem("user"));
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ ...localUser, displayName: newName })
+      );
+
+      setIsEditing(false);
+    } catch (error) {
+      alert("Error updating name. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center text-purple-600">
+        <Loader2 className="animate-spin" size={40} />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      <header>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">My Profile</h2>
-        <p className="text-gray-500 text-sm">
-          Manage your personal details and view your progress.
+    <div className="max-w-6xl mx-auto space-y-6 md:space-y-8 pb-10 px-2 md:px-0">
+      <header className="text-center md:text-left transition-all duration-500">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1 tracking-tight">
+          User Profile
+        </h2>
+        <p className="text-gray-500 text-xs md:text-sm italic">
+          Your progress is your legacy
         </p>
       </header>
 
-      {/* Profile Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {/* Column 1: Identity & Contact */}
-        <div className="lg:col-span-1 xl:col-span-1 space-y-6">
-          <ProfileCard>
-            <div className="flex flex-col items-center text-center">
-              {/* Profile Picture Placeholder (Matching the reference design) */}
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-300 to-blue-300 flex items-center justify-center text-5xl font-extrabold text-white mb-4 shadow-xl">
-                {user.name[0]}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Identity Box */}
+        <div className="lg:col-span-5 xl:col-span-4 transition-all duration-300 hover:-translate-y-1">
+          <div className="bg-white/70 backdrop-blur-xl border border-white/60 p-6 md:p-8 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col items-center md:items-start">
+            {/* Avatar Section */}
+            <div className="relative mb-6 group">
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-4xl font-black text-white shadow-2xl rotate-3 group-hover:rotate-0 transition-transform duration-500">
+                {userData?.displayName?.[0] || "U"}
               </div>
-              <h3 className="text-xl font-bold text-gray-900">{user.name}</h3>
-              <p className="text-sm text-gray-500">{user.stream}</p>
-              <button className="mt-4 px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-full hover:bg-purple-700 transition-colors">
-                Edit Profile
-              </button>
             </div>
-          </ProfileCard>
 
-          {/* Contact Details Card */}
-          <ProfileCard title="Contact Info">
-            <div className="space-y-3">
-              {user.contact.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center space-x-3 text-sm text-gray-700"
-                >
-                  <span className="text-purple-600">{item.icon}</span>
-                  <p>{item.value}</p>
+            {/* Editable Name Section */}
+            <div className="w-full mb-6 text-center md:text-left">
+              {isEditing ? (
+                <div className="space-y-2 animate-in fade-in zoom-in-95 duration-200">
+                  <input
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="w-full p-2 border border-purple-200 rounded-xl font-bold text-gray-900 outline-none text-center md:text-left shadow-inner bg-white/50"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveName}
+                      disabled={saving}
+                      className="flex-1 py-2 bg-green-500 text-white rounded-lg flex justify-center hover:bg-green-600 transition-colors"
+                    >
+                      {saving ? (
+                        <Loader2 className="animate-spin" size={18} />
+                      ) : (
+                        <Check size={18} />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditing(false);
+                        setNewName(userData.displayName);
+                      }}
+                      className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-lg flex justify-center hover:bg-gray-200 transition-colors"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
                 </div>
-              ))}
+              ) : (
+                <div className="group relative">
+                  <h3 className="text-xl font-black text-gray-900 flex items-center gap-2 justify-center md:justify-start">
+                    {userData?.displayName}
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="text-gray-300 hover:text-purple-600 transition-all hover:scale-110"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                  </h3>
+                  <p className="text-purple-600 font-bold text-[10px] uppercase tracking-wider">
+                    {userData?.role || "Student Member"}
+                  </p>
+                </div>
+              )}
             </div>
-          </ProfileCard>
+
+            <div className="w-full space-y-4 pt-4 border-t border-gray-100">
+              <ContactRow
+                icon={<Mail size={16} />}
+                label="Email"
+                value={userData?.email}
+              />
+              <ContactRow
+                icon={<GraduationCap size={16} />}
+                label="Dept"
+                value={userData?.dept}
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Column 2: Stats and Achievements (Main Column) */}
-        <div className="lg:col-span-2 xl:col-span-3 space-y-6">
-          {/* Top Stat Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <StatMetric
-              icon={<Zap size={24} />}
+        {/* Stats and Info Section */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <StatCard
+              icon={<Zap size={20} />}
               label="Impact Score"
-              value={user.impactScore}
-              color="from-purple-600 to-indigo-500"
+              value={userData?.impactScore ?? 0}
+              desc="Total XP earned"
+              color="text-purple-600 bg-purple-100"
             />
-            <StatMetric
-              icon={<Trophy size={24} />}
+            <StatCard
+              icon={<Trophy size={20} />}
               label="Global Rank"
-              value={`#${user.globalRank}`}
-              color="from-green-500 to-emerald-600"
+              value={`#${userData?.globalRank || "--"}`}
+              desc="Community standing"
+              color="text-emerald-600 bg-emerald-100"
             />
-            <StatMetric
-              icon={<TrendingUp size={24} />}
-              label="Tasks Completed"
-              value="12"
-              color="from-blue-500 to-cyan-500"
+            <StatCard
+              icon={<TrendingUp size={20} />}
+              label="Tasks Done"
+              value={userData?.tasksCompleted ?? 0}
+              desc="Completed projects"
+              color="text-blue-600 bg-blue-100"
             />
           </div>
 
-          {/* Achievements/Skills Card */}
-          <ProfileCard
-            title="Current Learning Path"
-            icon={<GraduationCap size={20} className="text-purple-600" />}
-          >
-            <div className="space-y-4">
-              {user.achievements.map((item, index) => (
-                <ProgressItem
-                  key={index}
-                  title={item.title}
-                  progress={item.progress}
-                  level={item.level}
-                />
-              ))}
+          {/* FUTURE SECTIONS (Commented Out) */}
+          {/* <div className="bg-white/40 p-6 rounded-3xl border border-dashed border-gray-300 opacity-60">
+            <div className="flex items-center gap-2 mb-4 text-gray-500">
+              <Award size={20} />
+              <h4 className="font-bold">Badges & Achievements</h4>
             </div>
-          </ProfileCard>
+            <p className="text-xs text-gray-400">Locked section: No badges earned yet.</p>
+          </div>
+          */}
 
-          {/* Badges Card */}
-          <ProfileCard
-            title="Badges & Recognitions"
-            icon={<Medal size={20} className="text-yellow-600" />}
-          >
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {user.badges.map((badge, index) => (
-                <Badge
-                  key={index}
-                  name={badge.name}
-                  color={badge.color}
-                  icon={badge.icon}
-                />
-              ))}
+          {/* LIGHTWEIGHT BANNER */}
+          <div className="bg-white/60 backdrop-blur-md border border-white/80 p-6 rounded-[2rem] shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 group hover:border-purple-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-default">
+            <div className="flex items-center gap-4 text-center md:text-left">
+              <div className="p-3 bg-purple-100 text-purple-600 rounded-2xl group-hover:rotate-12 transition-transform duration-500">
+                <Sparkles size={24} />
+              </div>
+              <div>
+                <h4 className="text-base font-bold text-gray-900 tracking-tight">
+                  Level up your profile
+                </h4>
+                <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
+                  Unlock hidden statistics and climb the global ranks by
+                  finishing tasks from the community.
+                </p>
+              </div>
             </div>
-          </ProfileCard>
 
-          {/* External Links / Social */}
-          <ProfileCard
-            title="Portfolio & Social"
-            icon={<ExternalLink size={20} className="text-blue-600" />}
-          >
-            <div className="flex flex-wrap gap-3">
-              <SocialButton
-                icon={<Github size={20} />}
-                text="GitHub"
-                href={`https://github.com/${
-                  user.contact.find((c) => c.type === "GitHub").value
-                }`}
-              />
-              <SocialButton
-                icon={<Mail size={20} />}
-                text="Email"
-                href={`mailto:${
-                  user.contact.find((c) => c.type === "Email").value
-                }`}
-              />
-            </div>
-          </ProfileCard>
+            <Link href="/dashboard/tasks" className="w-full md:w-auto">
+              <button className="w-full px-6 py-3 bg-purple-600 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-purple-700 hover:gap-3 transition-all shadow-md active:scale-95">
+                Browse Tasks
+                <ChevronRight
+                  size={14}
+                  className="group-hover:translate-x-1 transition-transform"
+                />
+              </button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -186,91 +249,39 @@ export default function ProfilePage() {
 // HELPER COMPONENTS
 // ----------------------------------------------------
 
-// Base Card component for the Glassmorphism look
-function ProfileCard({ title, icon, children }) {
+function ContactRow({ icon, label, value }) {
   return (
-    <div className="bg-white/70 backdrop-blur-xl border border-white/60 p-6 rounded-2xl shadow-lg relative">
-      {(title || icon) && (
-        <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
-          <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-          {icon}
-        </div>
-      )}
-      {children}
-    </div>
-  );
-}
-
-// Metric component for the top stat bar
-function StatMetric({ label, value, icon, color }) {
-  return (
-    <div className="bg-white/70 backdrop-blur-xl border border-white/60 p-6 rounded-2xl shadow-sm">
-      <div className="flex items-center space-x-3">
-        <div
-          className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${color} bg-gradient-to-br shadow-md`}
-        >
-          {icon}
-        </div>
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase">
-            {label}
-          </p>
-          <p
-            className={`text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r ${color}`}
-          >
-            {value}
-          </p>
-        </div>
+    <div className="flex items-center gap-3 group/row transition-all duration-200 hover:pl-1">
+      <div className="p-1.5 bg-gray-50 rounded-lg text-gray-400 group-hover/row:bg-purple-50 group-hover/row:text-purple-500 transition-colors">
+        {icon}
+      </div>
+      <div className="text-left overflow-hidden">
+        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">
+          {label}
+        </p>
+        <p className="text-xs font-semibold text-gray-700 truncate">{value}</p>
       </div>
     </div>
   );
 }
 
-// Progress Bar Item
-function ProgressItem({ title, progress, level }) {
+function StatCard({ label, value, icon, color, desc }) {
   return (
-    <div>
-      <div className="flex justify-between items-center mb-1">
-        <p className="text-sm font-semibold text-gray-800">{title}</p>
-        <span className="text-xs text-gray-500">
-          {level} - {progress}%
-        </span>
-      </div>
-      <div className="w-full bg-gray-200/50 rounded-full h-2.5 overflow-hidden">
-        <div
-          className="bg-gradient-to-r from-purple-600 to-blue-500 h-full rounded-full transition-all duration-1000 ease-out"
-          style={{ width: `${progress}%` }}
-        ></div>
-      </div>
-    </div>
-  );
-}
-
-// Badge Component
-function Badge({ name, color, icon }) {
-  return (
-    <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-white transition-colors">
+    <div className="bg-white/70 backdrop-blur-xl border border-white/60 p-5 rounded-3xl shadow-sm flex flex-col items-start hover:-translate-y-1.5 hover:shadow-xl transition-all duration-300 group cursor-default h-full">
       <div
-        className={`w-6 h-6 rounded-full flex items-center justify-center text-white ${color}`}
+        className={`w-10 h-10 rounded-xl flex items-center justify-center ${color} mb-4 group-hover:scale-110 transition-transform duration-500`}
       >
         {icon}
       </div>
-      <span className="text-sm font-medium text-gray-700">{name}</span>
+      <div className="space-y-0.5">
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+          {label}
+        </p>
+        <p className="text-2xl font-black text-gray-900 italic leading-tight">
+          {value}
+        </p>
+        <p className="text-[9px] text-gray-500 font-medium">{desc}</p>
+      </div>
     </div>
-  );
-}
-
-// Social Button
-function SocialButton({ icon, text, href }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-center space-x-2 px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-purple-600 transition-colors shadow-md"
-    >
-      {icon}
-      <span>{text}</span>
-    </a>
   );
 }
