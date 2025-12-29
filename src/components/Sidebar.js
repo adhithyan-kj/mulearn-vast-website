@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react"; // Added useEffect and useState
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -9,17 +10,30 @@ import {
   Trophy,
   LogOut,
   X,
+  ShieldCheck, // Added for Management
+  FileCheck, // Added for Submissions
+  Users, // Added for Mentor Requests
 } from "lucide-react";
 
-// Accept props for mobile control
 export default function Sidebar({ mobileOpen, setMobileOpen }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  // --- ROLE STATE ---
+  const [userRole, setUserRole] = useState("student");
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUserRole(parsedUser.role || "student");
+    }
+  }, []);
+
+  const isAdminOrMentor = ["admin", "mentor"].includes(userRole);
+
   const handleLogout = () => {
-    // 1. Remove user data
     localStorage.removeItem("user");
-    // 2. Redirect to Onboarding
     router.push("/onboarding");
   };
 
@@ -30,7 +44,6 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
 
   return (
     <>
-      {/* Mobile Overlay (Backdrop) */}
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
@@ -38,12 +51,10 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
         />
       )}
 
-      {/* Sidebar Container */}
       <aside
         className={`fixed top-0 left-0 h-full w-[280px] bg-white/80 backdrop-blur-xl border-r border-gray-100 shadow-glass z-50 flex flex-col transition-transform duration-300 ease-in-out
         ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
       >
-        {/* Logo Area */}
         <div className="p-8 mb-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-tr from-purple-600 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold shadow-md">
@@ -53,7 +64,6 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
               Mulearn
             </h2>
           </div>
-          {/* Close Button (Mobile Only) */}
           <button
             onClick={() => setMobileOpen(false)}
             className="md:hidden p-1 text-gray-500 hover:bg-gray-100 rounded-lg"
@@ -62,7 +72,6 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
           </button>
         </div>
 
-        {/* Navigation Links */}
         <nav className="flex-grow px-6 space-y-2">
           <NavItem
             href="/dashboard"
@@ -92,9 +101,31 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
             active={isActive("/dashboard/leaderboard")}
             onClick={() => setMobileOpen(false)}
           />
+
+          {/* --- MANAGEMENT SECTION (Conditional) --- */}
+          {isAdminOrMentor && (
+            <div className="pt-6 mt-6 border-t border-gray-100 space-y-2">
+              <p className="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                Management
+              </p>
+              <NavItem
+                href="/dashboard/management/submissions"
+                icon={<FileCheck size={20} />}
+                label="Verify Tasks"
+                active={isActive("/dashboard/management/submissions")}
+                onClick={() => setMobileOpen(false)}
+              />
+              <NavItem
+                href="/dashboard/management/requests"
+                icon={<Users size={20} />}
+                label="Mentor Requests"
+                active={isActive("/dashboard/management/requests")}
+                onClick={() => setMobileOpen(false)}
+              />
+            </div>
+          )}
         </nav>
 
-        {/* Logout Button (Working) */}
         <div className="p-6 mt-auto">
           <button
             onClick={handleLogout}

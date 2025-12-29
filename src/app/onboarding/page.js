@@ -43,16 +43,18 @@ export default function OnboardingPage() {
       } else {
         // --- SIGN UP LOGIC ---
         const newUser = {
-          email,
-          password,
           displayName: name,
-          dept: department,
-          role: "student", // Default role
+          email: email,
+          dept: "cse", // or from a dropdown
+          role: "student",
           impactScore: 0,
+          tasksCompleted: 0, // Added
+          mentorId: null, // Added
+          companionId: null, // Added
+          createdAt: new Date(),
         };
 
-        // Save to Firestore
-        await setDoc(userRef, newUser);
+        await setDoc(doc(db, "users", email), newUser);
 
         // Save to Local Storage & Redirect
         localStorage.setItem("user", JSON.stringify(newUser));
