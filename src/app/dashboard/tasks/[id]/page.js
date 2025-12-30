@@ -137,40 +137,57 @@ export default function TaskDetailPage() {
   const handleSave = async () => {
     try {
       const docRef = doc(db, "tasks", id);
-      await updateDoc(docRef, formData);
+
+      // --- THE FIX ---
+      // We send the secret Admin Key from your .env.local file
+      // If this key is missing, the Firestore Rules will block the update
+      await updateDoc(docRef, {
+        ...formData,
+        adminKey: process.env.NEXT_PUBLIC_ADMIN_KEY,
+        lastEditedAt: serverTimestamp(), // Tracks when the admin last modified it
+      });
+
       setTask(formData);
       setIsEditing(false);
       alert("Task updated successfully!");
     } catch (error) {
-      console.error("Error updating task:", error);
-      alert("Failed to update task.");
+      // This catches the 'permission-denied' error if a hacker tries to edit
+      if (
+        error.code === "permission-denied" ||
+        error.message.includes("permissions")
+      ) {
+        const msg =
+          "Nice try! Server-side verification is now active. Your client-side tricks won't work here. 😉. poyitt pinne vaa";
+
+        console.warn(msg);
+        alert(msg);
+      } else {
+        console.error("Error updating task:", error);
+        alert("Failed to update task: " + error.message);
+      }
     }
   };
 
-  const handleTaskSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
+  const handleUpdateTask = async () => {
     try {
-      await addDoc(collection(db, "submissions"), {
-        studentId: user.email,
-        taskId: id,
-        taskTitle: task.title,
-        status: "pending",
-        links: links,
-        feedback: "",
-        submittedAt: serverTimestamp(),
+      const docRef = doc(db, "tasks", id);
+
+      await updateDoc(docRef, {
+        ...formData,
+        adminKey: process.env.NEXT_PUBLIC_ADMIN_KEY,
+        updatedAt: serverTimestamp(),
       });
-      setSubmitted(true);
-      setTimeout(() => {
-        setIsModalOpen(false);
-        setSubmitted(false);
-        setLinks({ drive: "", screenshot: "", other: "" });
-      }, 3000);
+
+      alert("Task updated successfully!");
     } catch (error) {
-      console.error("Submission error:", error);
-      alert("Failed to submit work.");
-    } finally {
-      setSubmitting(false);
+      if (error.code === "permission-denied") {
+        const msg =
+          "Nice try! Server-side verification is now active. Your client-side tricks won't work here. 😉. poyitt pinne vaa";
+        console.warn(msg);
+        alert(msg);
+      } else {
+        alert("Error: " + error.message);
+      }
     }
   };
 
