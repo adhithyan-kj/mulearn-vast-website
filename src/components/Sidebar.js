@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"; // Added useEffect and useState
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { db } from "@/lib/firebase"; // Ensure this path is correct
-import { doc, getDoc } from "firebase/firestore";
 import {
   LayoutDashboard,
   ListChecks,
@@ -12,8 +10,9 @@ import {
   Trophy,
   LogOut,
   X,
-  FileCheck,
-  Users,
+  ShieldCheck, // Added for Management
+  FileCheck, // Added for Submissions
+  Users, // Added for Mentor Requests
 } from "lucide-react";
 
 export default function Sidebar({ mobileOpen, setMobileOpen }) {
@@ -24,31 +23,11 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
   const [userRole, setUserRole] = useState("student");
 
   useEffect(() => {
-    const verifyUserRole = async () => {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-
-        // --- THE SECURITY UPGRADE: SERVER-SIDE CHECK ---
-        // We fetch the truth from Firestore instead of trusting the browser
-        try {
-          const userRef = doc(db, "users", parsedUser.email);
-          const userSnap = await getDoc(userRef);
-
-          if (userSnap.exists()) {
-            const actualRole = userSnap.data().role || "student";
-            setUserRole(actualRole);
-          } else {
-            setUserRole("student");
-          }
-        } catch (error) {
-          console.error("Sidebar role verification failed:", error);
-          setUserRole("student");
-        }
-      }
-    };
-
-    verifyUserRole();
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUserRole(parsedUser.role || "student");
+    }
   }, []);
 
   const isAdminOrMentor = ["admin", "mentor"].includes(userRole);
@@ -123,7 +102,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
             onClick={() => setMobileOpen(false)}
           />
 
-          {/* --- MANAGEMENT SECTION (Enforced by Firestore check) --- */}
+          {/* --- MANAGEMENT SECTION (Conditional) --- */}
           {isAdminOrMentor && (
             <div className="pt-6 mt-6 border-t border-gray-100 space-y-2">
               <p className="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">

@@ -53,48 +53,45 @@ export default function VerifySubmissionsPage() {
   };
 
   const handleAction = async (submission, status) => {
+    let feedback = "";
+    if (status === "rejected") {
+      feedback = prompt("Please provide a reason for rejection (Mandatory):");
+      if (!feedback) return alert("Rejection requires a reason.");
+    }
+
+    setProcessing(submission.id);
     try {
       const subRef = doc(db, "submissions", submission.id);
       const studentRef = doc(db, "users", submission.studentId);
 
-      const verificationData = {
+      // 1. Update Submission Status
+      await updateDoc(subRef, {
         status: status,
-        verifiedAt: serverTimestamp(),
-      };
+        feedback: feedback,
+        verifiedAt: new Date(),
+      });
 
-      // Assigning keys based on role
-      if (user.role === "admin") {
-        verificationData.adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY;
-      } else if (user.role === "mentor") {
-        verificationData.mentorKey = process.env.NEXT_PUBLIC_MENTOR_KEY;
-      }
-
-      // Attempt to update the submission with the secret key
-      await updateDoc(subRef, verificationData);
-
+      // 2. If Approved, update Student Stats
       if (status === "approved") {
-        const studentSnap = await getDoc(studentRef);
-        if (studentSnap.exists()) {
-          const currentData = studentSnap.data();
-          await updateDoc(studentRef, {
-            impactScore: (currentData.impactScore || 0) + (task?.score || 0),
-            tasksCompleted: (currentData.tasksCompleted || 0) + 1,
-            adminKey: process.env.NEXT_PUBLIC_ADMIN_KEY,
-          });
-        }
+        // Fetch task reward amount (fixedXP)
+        const taskRef = doc(db, "tasks", submission.taskId);
+        const taskSnap = await getDoc(taskRef);
+        const reward = taskSnap.exists() ? Number(taskSnap.data().score) : 0;
+
+        await updateDoc(studentRef, {
+          impactScore: increment(reward),
+          tasksCompleted: increment(1),
+        });
       }
 
-      alert(`Submission ${status}!`);
+      // Refresh list
+      setSubmissions((prev) => prev.filter((s) => s.id !== submission.id));
+      alert(`Submission ${status} successfully!`);
     } catch (error) {
-      if (error.code === "permission-denied") {
-        const msg =
-          "Nice try! Server-side verification is now active. Your client-side tricks won't work here. 😉. poyitt pinne vaa";
-        console.warn(msg);
-        alert(msg);
-      } else {
-        console.error("Action failed:", error);
-        alert("An unexpected error occurred.");
-      }
+      console.error("Action error:", error);
+      alert("Failed to process submission.");
+    } finally {
+      setProcessing(null);
     }
   };
 
