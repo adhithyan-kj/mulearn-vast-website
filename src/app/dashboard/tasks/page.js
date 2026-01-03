@@ -47,32 +47,17 @@ export default function TaskLibraryPage() {
   }, []);
 
   // 3. Admin Function: Add Task
-  const handleAddTask = async (taskData) => {
-    try {
-      // Proves you are the real Admin to the Firestore Rules
-      await addDoc(collection(db, "tasks"), {
-        ...taskData,
-        adminKey: process.env.NEXT_PUBLIC_ADMIN_KEY,
-        createdAt: serverTimestamp(),
-      });
-
-      alert("Task added successfully!");
-    } catch (error) {
-      // This catches the 'permission-denied' error sent by the server
-      if (
-        error.code === "permission-denied" ||
-        error.message.includes("permissions")
-      ) {
-        const msg =
-          "Nice try! Server-side verification is now active. Your client-side tricks won't work here. 😉. poyitt pinne vaa";
-
-        console.warn(msg);
-        alert(msg);
-      } else {
-        console.error("Error adding task:", error);
-        alert("Failed to add task: " + error.message);
-      }
-    }
+  const handleAddTask = async () => {
+    const newTask = {
+      title: "New Untitled Task",
+      desc: "Description goes here...",
+      difficulty: "EASY",
+      score: 100,
+      category: "General",
+      tagColor: "bg-gray-100 text-gray-700 border-gray-200",
+    };
+    await addDoc(collection(db, "tasks"), newTask);
+    fetchTasks(); // Refresh list
   };
 
   // 4. Admin Function: Delete Task
