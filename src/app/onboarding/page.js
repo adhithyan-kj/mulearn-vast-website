@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { db, auth, googleProvider } from "@/lib/firebase"; 
 import { 
   signInWithPopup, 
   createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword 
+  signInWithEmailAndPassword,
+  onAuthStateChanged 
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
@@ -15,6 +16,17 @@ export default function OnboardingPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  // --- ADD THE REDIRECT GUARD HERE ---
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // If Firebase says we are already logged in, skip this page
+        router.push("/dashboard");
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
 
   // --- Google Auth Logic: Secure & Passwordless ---
   const handleGoogleAuth = async () => {
