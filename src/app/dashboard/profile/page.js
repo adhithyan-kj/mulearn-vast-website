@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase"; // Added auth
+import { onAuthStateChanged } from "firebase/auth"; // Added for security
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import {
   Mail,
@@ -17,57 +18,56 @@ import {
   Edit2,
   Sparkles,
   ChevronRight,
-  Award,
-  BookOpen,
 } from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();
   const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Default to true for security
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
-    try {
-      const storedUser = localStorage.getItem("user");
-      if (!storedUser) return;
-
-      const { email } = JSON.parse(storedUser);
-      const userRef = doc(db, "users", email);
-      const userSnap = await getDoc(userRef);
-
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-        setUserData(data);
-        setNewName(data.displayName);
+    // --- THE SECURITY GUARD: Verified Session Listener ---
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        // No valid token? Redirect instantly to onboarding
+        router.replace("/onboarding");
       } else {
-        // Fallback to local storage if doc isn't created yet
-        setUserData(JSON.parse(storedUser));
+        try {
+          // Fetch real data from Firestore using the verified email
+          const userRef = doc(db, "users", user.email);
+          const userSnap = await getDoc(userRef);
+
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            setUserData(data);
+            setNewName(data.displayName);
+          }
+          setLoading(false); // Reveal the UI only after verification
+        } catch (error) {
+          console.error("Error fetching profile:", error);
+          router.replace("/onboarding");
+        }
       }
-    } catch (error) {
-      console.error("Error fetching profile:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   const handleSaveName = async () => {
     if (!newName.trim()) return;
     setSaving(true);
     try {
-      const userRef = doc(db, "users", userData.email);
+      // Use auth.currentUser to ensure we update the correct user
+      const userRef = doc(db, "users", auth.currentUser.email);
       await updateDoc(userRef, { displayName: newName });
 
       setUserData({ ...userData, displayName: newName });
 
-      // Update localStorage so the layout navigation updates immediately
-      const localUser = JSON.parse(localStorage.getItem("user"));
+      // Update localStorage so the Sidebar name updates immediately
+      const localUser = JSON.parse(localStorage.getItem("user") || "{}");
       localStorage.setItem(
         "user",
         JSON.stringify({ ...localUser, displayName: newName })
@@ -81,16 +81,18 @@ export default function ProfilePage() {
     }
   };
 
+  // --- THE LOADING SCREEN: Prevents URL Bypass ---
   if (loading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center text-purple-600">
-        <Loader2 className="animate-spin" size={40} />
+      <div className="flex h-screen flex-col items-center justify-center bg-white">
+        <Loader2 className="animate-spin text-purple-600 mb-4" size={40} />
+        <p className="text-gray-500 font-medium animate-pulse">Verifying Access...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 md:space-y-8 pb-10 px-2 md:px-0">
+    <div className="max-w-6xl mx-auto space-y-6 md:space-y-8 pb-10 px-2 md:px-0 animate-fade-in">
       <header className="text-center md:text-left transition-all duration-500">
         <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1 tracking-tight">
           User Profile
@@ -104,14 +106,12 @@ export default function ProfilePage() {
         {/* Identity Box */}
         <div className="lg:col-span-5 xl:col-span-4 transition-all duration-300 hover:-translate-y-1">
           <div className="bg-white/70 backdrop-blur-xl border border-white/60 p-6 md:p-8 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col items-center md:items-start">
-            {/* Avatar Section */}
             <div className="relative mb-6 group">
               <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-4xl font-black text-white shadow-2xl rotate-3 group-hover:rotate-0 transition-transform duration-500">
                 {userData?.displayName?.[0] || "U"}
               </div>
             </div>
 
-            {/* Editable Name Section */}
             <div className="w-full mb-6 text-center md:text-left">
               {isEditing ? (
                 <div className="space-y-2 animate-in fade-in zoom-in-95 duration-200">
@@ -126,11 +126,7 @@ export default function ProfilePage() {
                       disabled={saving}
                       className="flex-1 py-2 bg-green-500 text-white rounded-lg flex justify-center hover:bg-green-600 transition-colors"
                     >
-                      {saving ? (
-                        <Loader2 className="animate-spin" size={18} />
-                      ) : (
-                        <Check size={18} />
-                      )}
+                      {saving ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
                     </button>
                     <button
                       onClick={() => {
@@ -162,16 +158,8 @@ export default function ProfilePage() {
             </div>
 
             <div className="w-full space-y-4 pt-4 border-t border-gray-100">
-              <ContactRow
-                icon={<Mail size={16} />}
-                label="Email"
-                value={userData?.email}
-              />
-              <ContactRow
-                icon={<GraduationCap size={16} />}
-                label="Dept"
-                value={userData?.dept}
-              />
+              <ContactRow icon={<Mail size={16} />} label="Email" value={userData?.email} />
+              <ContactRow icon={<GraduationCap size={16} />} label="Dept" value={userData?.dept} />
             </div>
           </div>
         </div>
@@ -202,29 +190,15 @@ export default function ProfilePage() {
             />
           </div>
 
-          {/* FUTURE SECTIONS (Commented Out) */}
-          {/* <div className="bg-white/40 p-6 rounded-3xl border border-dashed border-gray-300 opacity-60">
-            <div className="flex items-center gap-2 mb-4 text-gray-500">
-              <Award size={20} />
-              <h4 className="font-bold">Badges & Achievements</h4>
-            </div>
-            <p className="text-xs text-gray-400">Locked section: No badges earned yet.</p>
-          </div>
-          */}
-
-          {/* LIGHTWEIGHT BANNER */}
           <div className="bg-white/60 backdrop-blur-md border border-white/80 p-6 rounded-[2rem] shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 group hover:border-purple-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-default">
             <div className="flex items-center gap-4 text-center md:text-left">
               <div className="p-3 bg-purple-100 text-purple-600 rounded-2xl group-hover:rotate-12 transition-transform duration-500">
                 <Sparkles size={24} />
               </div>
               <div>
-                <h4 className="text-base font-bold text-gray-900 tracking-tight">
-                  Level up your profile
-                </h4>
+                <h4 className="text-base font-bold text-gray-900 tracking-tight">Level up your profile</h4>
                 <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
-                  Unlock hidden statistics and climb the global ranks by
-                  finishing tasks from the community.
+                  Unlock hidden statistics and climb the global ranks by finishing tasks from the community.
                 </p>
               </div>
             </div>
@@ -232,10 +206,6 @@ export default function ProfilePage() {
             <Link href="/dashboard/tasks" className="w-full md:w-auto">
               <button className="w-full px-6 py-3 bg-purple-600 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-purple-700 hover:gap-3 transition-all shadow-md active:scale-95">
                 Browse Tasks
-                <ChevronRight
-                  size={14}
-                  className="group-hover:translate-x-1 transition-transform"
-                />
               </button>
             </Link>
           </div>
@@ -246,7 +216,7 @@ export default function ProfilePage() {
 }
 
 // ----------------------------------------------------
-// HELPER COMPONENTS
+// HELPER COMPONENTS (Maintained)
 // ----------------------------------------------------
 
 function ContactRow({ icon, label, value }) {
@@ -256,9 +226,7 @@ function ContactRow({ icon, label, value }) {
         {icon}
       </div>
       <div className="text-left overflow-hidden">
-        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">
-          {label}
-        </p>
+        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">{label}</p>
         <p className="text-xs font-semibold text-gray-700 truncate">{value}</p>
       </div>
     </div>
@@ -268,18 +236,12 @@ function ContactRow({ icon, label, value }) {
 function StatCard({ label, value, icon, color, desc }) {
   return (
     <div className="bg-white/70 backdrop-blur-xl border border-white/60 p-5 rounded-3xl shadow-sm flex flex-col items-start hover:-translate-y-1.5 hover:shadow-xl transition-all duration-300 group cursor-default h-full">
-      <div
-        className={`w-10 h-10 rounded-xl flex items-center justify-center ${color} mb-4 group-hover:scale-110 transition-transform duration-500`}
-      >
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color} mb-4 group-hover:scale-110 transition-transform duration-500`}>
         {icon}
       </div>
       <div className="space-y-0.5">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-          {label}
-        </p>
-        <p className="text-2xl font-black text-gray-900 italic leading-tight">
-          {value}
-        </p>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+        <p className="text-2xl font-black text-gray-900 italic leading-tight">{value}</p>
         <p className="text-[9px] text-gray-500 font-medium">{desc}</p>
       </div>
     </div>
