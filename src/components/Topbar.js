@@ -1,20 +1,42 @@
 "use client";
 import { Bell, Search, Menu } from "lucide-react";
 import { useState, useEffect } from "react";
+import { auth, db } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
-// Accept prop to toggle sidebar
 export default function Topbar({ title = "Dashboard", setMobileOpen }) {
-  const [user, setUser] = useState({ displayName: "Guest", role: "Visitor" });
+  const [user, setUser] = useState({ displayName: "Loading...", role: "Student" });
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("user");
-    if (stored) setUser(JSON.parse(stored));
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser) {
+        try {
+          const userRef = doc(db, "users", authUser.email);
+          const userSnap = await getDoc(userRef);
+
+          if (userSnap.exists()) {
+            // We merge the Firestore data with the Auth photoURL
+            setUser({
+              ...userSnap.data(),
+              photoURL: authUser.photoURL // Google provides this automatically
+            });
+          }
+        } catch (error) {
+          console.error("Topbar Error:", error);
+        }
+      } else {
+        setUser({ displayName: "Guest", role: "Visitor" });
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   return (
     <header className="fixed top-0 right-0 h-20 bg-white/80 backdrop-blur-md border-b border-gray-100 z-40 px-4 md:px-8 flex justify-between items-center shadow-md transition-all duration-300 left-0 md:left-[280px]">
       <div className="flex items-center gap-4">
-        {/* Hamburger Menu (Mobile Only) */}
         <button
           onClick={() => setMobileOpen(true)}
           className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
@@ -22,15 +44,12 @@ export default function Topbar({ title = "Dashboard", setMobileOpen }) {
           <Menu size={24} />
         </button>
 
-        {/* Dynamic Title */}
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">
           {title}
         </h1>
       </div>
 
-      {/* Right Actions */}
       <div className="flex items-center space-x-3 md:space-x-6">
-        {/* Search Bar (Hidden on small mobile) */}
         <div className="hidden sm:flex items-center bg-gray-100/70 rounded-full px-4 py-2 border border-transparent focus-within:border-purple-300 focus-within:bg-white transition-all">
           <Search size={18} className="text-gray-400" />
           <input
@@ -51,10 +70,22 @@ export default function Topbar({ title = "Dashboard", setMobileOpen }) {
             <p className="text-sm font-bold text-gray-800">
               {user.displayName}
             </p>
-            <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+            <p className="text-xs text-gray-500 capitalize">{user.role || "Member"}</p>
           </div>
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 border-2 border-white shadow-md flex items-center justify-center text-purple-600 font-bold">
-            {user.displayName.charAt(0)}
+          
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-500 shadow-lg flex items-center justify-center text-white font-bold overflow-hidden border-2 border-white">
+             {/* 🖼️ THE REINFORCED IMAGE LOGIC */}
+             {user.photoURL && !imgError ? (
+               <img 
+                 src={user.photoURL} 
+                 alt="Profile" 
+                 referrerPolicy="no-referrer" // 🛡️ Fixes Google image "403 Forbidden" errors
+                 className="w-full h-full object-cover"
+                 onError={() => setImgError(true)} // If image fails, switch to Initial
+               />
+             ) : (
+               <span className="text-lg">{user.displayName?.charAt(0) || "U"}</span>
+             )}
           </div>
         </div>
       </div>

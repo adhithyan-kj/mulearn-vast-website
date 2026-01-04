@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, limit, getDocs, doc, getDoc } from "firebase/firestore";
 import { Medal, Search, Trophy, Loader2 } from "lucide-react";
 
 export default function LeaderboardPage() {
@@ -14,36 +14,55 @@ export default function LeaderboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // --- 1. THE SECURITY GUARD ---
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        router.replace("/onboarding"); // Kick out if not logged in
+        router.replace("/onboarding");
       } else {
         try {
-          // --- 2. FETCH REAL LEADERBOARD DATA ---
+          // 1. Fetch Top 20 Users from Firestore
           const q = query(
             collection(db, "users"),
             orderBy("impactScore", "desc"),
             limit(20)
           );
+          
           const querySnapshot = await getDocs(q);
+          
           const fetchedRankings = querySnapshot.docs.map((doc, index) => ({
             rank: index + 1,
-            name: doc.data().displayName,
-            score: doc.data().impactScore,
+            name: doc.data().displayName || "Student",
+            score: doc.data().impactScore || 0,
             stream: doc.data().dept || "CSE",
             email: doc.data().email,
           }));
 
           setRankings(fetchedRankings);
           
-          // Find the current logged-in user in the list for the top card
-          const current = fetchedRankings.find((u) => u.email === user.email);
-          setCurrentUserData(current);
+          // 2. Identification logic
+          const currentInTop20 = fetchedRankings.find(
+            (u) => u.email?.toLowerCase() === user.email?.toLowerCase()
+          );
           
-          setLoading(false);
+          if (currentInTop20) {
+            setCurrentUserData(currentInTop20);
+          } else {
+            // Fetch specific data if not in top 20
+            const userRef = doc(db, "users", user.email);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+              const data = userSnap.data();
+              setCurrentUserData({
+                rank: "---", 
+                name: data.displayName,
+                score: data.impactScore,
+                email: data.email
+              });
+            }
+          }
         } catch (error) {
-          console.error("Leaderboard Error:", error);
+          console.error("Leaderboard Fetch Error:", error);
+          // If you still see this, double-check your Firestore Rules update!
+        } finally {
           setLoading(false);
         }
       }
@@ -52,12 +71,11 @@ export default function LeaderboardPage() {
     return () => unsubscribe();
   }, [router]);
 
-  // --- 3. LOADING SCREEN (Prevents UI Leaks) ---
   if (loading) {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center">
         <Loader2 className="animate-spin text-purple-600 mb-4" size={40} />
-        <p className="text-gray-500 font-medium animate-pulse">Loading Leaderboard...</p>
+        <p className="text-gray-500 font-medium animate-pulse">Loading Rankings...</p>
       </div>
     );
   }
@@ -91,7 +109,7 @@ export default function LeaderboardPage() {
         </div>
       )}
 
-      {/* Search and Filters */}
+      {/* Search Bar */}
       <div className="flex items-center space-x-4 bg-white/70 backdrop-blur-md p-3 rounded-2xl border border-white/50 shadow-sm">
         <Search size={20} className="text-gray-400" />
         <input
@@ -110,16 +128,19 @@ export default function LeaderboardPage() {
         </div>
 
         {rankings.map((user) => (
-          <LeaderboardRow key={user.rank} user={user} currentEmail={auth.currentUser?.email} />
+          <LeaderboardRow 
+            key={user.email} 
+            user={user} 
+            isMe={auth.currentUser?.email?.toLowerCase() === user.email?.toLowerCase()} 
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function LeaderboardRow({ user, currentEmail }) {
-  const isCurrentUser = user.email === currentEmail;
-  const highlightClass = isCurrentUser
+function LeaderboardRow({ user, isMe }) {
+  const highlightClass = isMe
     ? "bg-purple-50/70 border-l-4 border-purple-500 font-bold"
     : "hover:bg-gray-50/70";
 
@@ -135,11 +156,11 @@ function LeaderboardRow({ user, currentEmail }) {
         {rankIcon}
       </div>
       <div className="col-span-2">
-        <p className={isCurrentUser ? "text-gray-900" : "text-gray-800"}>{user.name}</p>
+        <p className={isMe ? "text-gray-900" : "text-gray-800"}>{user.name}</p>
         <p className="text-xs text-gray-500">{user.stream}</p>
       </div>
       <div className="text-right pr-4">
-        <span className={isCurrentUser ? "text-purple-600" : "text-gray-800"}>{user.score}</span>
+        <span className={isMe ? "text-purple-600" : "text-gray-800"}>{user.score}</span>
       </div>
     </div>
   );
