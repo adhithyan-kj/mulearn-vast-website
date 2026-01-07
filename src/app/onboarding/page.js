@@ -17,50 +17,64 @@ export default function OnboardingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  // --- ADD THE REDIRECT GUARD HERE ---
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // If Firebase says we are already logged in, skip this page
-        router.push("/dashboard");
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
-
-  // --- Google Auth Logic: Secure & Passwordless ---
-  const handleGoogleAuth = async () => {
-    setIsLoading(true);
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      
-      const userRef = doc(db, "users", user.email);
-      const userSnap = await getDoc(userRef);
-
-      if (!userSnap.exists()) {
-        const newUser = {
-          displayName: user.displayName,
-          email: user.email,
-          photoURL: user.photoURL,
-          dept: "cse",
-          impactScore: 0,
-          tasksCompleted: 0,
-          createdAt: serverTimestamp(),
-        };
-        await setDoc(userRef, newUser);
-        localStorage.setItem("user", JSON.stringify(newUser));
-      } else {
-        localStorage.setItem("user", JSON.stringify(userSnap.data()));
-      }
-      router.push("/dashboard");
-    } catch (error) {
-      console.error("Google Auth Error:", error);
-      alert("Google Sign-In failed.");
-    } finally {
-      setIsLoading(false);
+  // Replace your existing useEffect in OnboardingPage.js with this:
+useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    if (user && !isLoading) {
+      // Check if they just signed in or are returning
+      // Direct them to the profile as requested
+      router.replace("/dashboard/profile");
     }
-  };
+  });
+  return () => unsubscribe();
+}, [router, isLoading]);
+
+  const handleGoogleAuth = async () => {
+  setIsLoading(true);
+  try {
+    // 1. Trigger Google Sign-In
+    const result = await signInWithPopup(auth, googleProvider);
+    const user = result.user;
+    
+    // 2. Reference the user document
+    const userRef = doc(db, "users", user.email);
+    const userSnap = await getDoc(userRef);
+
+    // 3. If student doesn't exist in Firestore, create their record
+    if (!userSnap.exists()) {
+      const newUser = {
+        displayName: user.displayName || "VAST Student",
+        email: user.email,
+        photoURL: user.photoURL || "",
+        dept: "cse",
+        impactScore: 0,
+        tasksCompleted: 0,
+        phone: "", // Required for companion privacy later
+        createdAt: serverTimestamp(),
+      };
+      
+      // We use await here to ensure the profile is created 
+      // BEFORE the page redirects, preventing the "User not found" error on the profile page.
+      await setDoc(userRef, newUser);
+    }
+    
+    // 4. Redirect to the Profile page as requested
+    // We use replace to prevent the user from clicking "back" into the login screen
+    router.replace("/dashboard/profile");
+
+  } catch (error) {
+    console.error("Google Auth Error:", error);
+    
+    // Handle the specific error where a user closes the popup window
+    if (error.code === 'auth/popup-closed-by-user') {
+      alert("Sign-in cancelled.");
+    } else {
+      alert("Sign-In failed: " + error.message);
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // --- Email/Password Auth Logic: Managed by Firebase Auth ---
   const handleAuth = async (e) => {

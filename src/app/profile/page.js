@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link"; 
-import { db, auth } from "@/lib/firebase"; 
-import { onAuthStateChanged } from "firebase/auth";
+import Link from "next/link";
+import { db, auth } from "@/lib/firebase"; // Added auth
+import { onAuthStateChanged } from "firebase/auth"; // Added for security
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import {
   Mail,
@@ -17,27 +17,26 @@ import {
   X,
   Edit2,
   Sparkles,
-  Phone,
-  Link as LinkIcon, // Added for the link input
-  ShieldCheck
+  ChevronRight,
 } from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();
   const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Default to true for security
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newPhone, setNewPhone] = useState("");
-  const [newPhotoURL, setNewPhotoURL] = useState(""); // State for the image link
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    // --- THE SECURITY GUARD: Verified Session Listener ---
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
+        // No valid token? Redirect instantly to onboarding
         router.replace("/onboarding");
       } else {
         try {
+          // Fetch real data from Firestore using the verified email
           const userRef = doc(db, "users", user.email);
           const userSnap = await getDoc(userRef);
 
@@ -45,10 +44,8 @@ export default function ProfilePage() {
             const data = userSnap.data();
             setUserData(data);
             setNewName(data.displayName);
-            setNewPhone(data.phone || "");
-            setNewPhotoURL(data.photoURL || "");
           }
-          setLoading(false);
+          setLoading(false); // Reveal the UI only after verification
         } catch (error) {
           console.error("Error fetching profile:", error);
           router.replace("/onboarding");
@@ -59,29 +56,32 @@ export default function ProfilePage() {
     return () => unsubscribe();
   }, [router]);
 
-  const handleSaveProfile = async () => {
+  const handleSaveName = async () => {
     if (!newName.trim()) return;
     setSaving(true);
     try {
+      // Use auth.currentUser to ensure we update the correct user
       const userRef = doc(db, "users", auth.currentUser.email);
-      
-      // Update Firestore with the new Name, Phone, and Photo Link
-      await updateDoc(userRef, { 
-        displayName: newName,
-        phone: newPhone,
-        photoURL: newPhotoURL 
-      });
+      await updateDoc(userRef, { displayName: newName });
 
-      setUserData({ ...userData, displayName: newName, phone: newPhone, photoURL: newPhotoURL });
+      setUserData({ ...userData, displayName: newName });
+
+      // Update localStorage so the Sidebar name updates immediately
+      const localUser = JSON.parse(localStorage.getItem("user") || "{}");
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ ...localUser, displayName: newName })
+      );
+
       setIsEditing(false);
-      alert("Profile updated!");
     } catch (error) {
-      alert("Error updating profile. Please try again.");
+      alert("Error updating name. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
+  // --- THE LOADING SCREEN: Prevents URL Bypass ---
   if (loading) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-white">
@@ -97,78 +97,34 @@ export default function ProfilePage() {
         <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1 tracking-tight">
           User Profile
         </h2>
-        <p className="text-gray-500 text-sm">Manage your personal information and image links.</p>
+        <p className="text-gray-500 text-xs md:text-sm italic">
+          Your progress is your legacy
+        </p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Identity Box */}
         <div className="lg:col-span-5 xl:col-span-4 transition-all duration-300 hover:-translate-y-1">
           <div className="bg-white/70 backdrop-blur-xl border border-white/60 p-6 md:p-8 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col items-center md:items-start">
-            
-            {/* PHOTO SECTION */}
             <div className="relative mb-6 group">
-              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center overflow-hidden shadow-2xl transition-transform duration-500">
-                {userData?.photoURL ? (
-                  <img 
-                    src={userData.photoURL} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover" 
-                    onError={(e) => {
-                        e.target.src = "https://ui-avatars.com/api/?name=" + userData.displayName;
-                    }}
-                  />
-                ) : (
-                  <span className="text-4xl font-black text-white">{userData?.displayName?.[0] || "U"}</span>
-                )}
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-4xl font-black text-white shadow-2xl rotate-3 group-hover:rotate-0 transition-transform duration-500">
+                {userData?.displayName?.[0] || "U"}
               </div>
             </div>
 
             <div className="w-full mb-6 text-center md:text-left">
               {isEditing ? (
-                <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Full Name</p>
-                    <input
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      className="w-full p-2 border border-purple-200 rounded-xl font-bold text-gray-900 outline-none shadow-inner bg-white/50"
-                    />
-                  </div>
-
-                  {/* PHOTO URL INPUT */}
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Photo Link (URL)</p>
-                    <div className="relative">
-                       <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                       <input
-                        value={newPhotoURL}
-                        onChange={(e) => setNewPhotoURL(e.target.value)}
-                        placeholder="Paste image link here..."
-                        className="w-full p-2 pl-9 border border-purple-200 rounded-xl font-bold text-gray-900 outline-none shadow-inner bg-white/50 text-xs"
-                       />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between items-center mb-1 ml-1">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase">WhatsApp Number</p>
-                      <span className="text-[9px] flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">
-                        <ShieldCheck size={10} /> Private
-                      </span>
-                    </div>
-                    <input
-                      value={newPhone}
-                      onChange={(e) => setNewPhone(e.target.value)}
-                      placeholder="+91..."
-                      className="w-full p-2 border border-purple-200 rounded-xl font-bold text-gray-900 outline-none shadow-inner bg-white/50"
-                    />
-                  </div>
-
+                <div className="space-y-2 animate-in fade-in zoom-in-95 duration-200">
+                  <input
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="w-full p-2 border border-purple-200 rounded-xl font-bold text-gray-900 outline-none text-center md:text-left shadow-inner bg-white/50"
+                  />
                   <div className="flex gap-2">
                     <button
-                      onClick={handleSaveProfile}
+                      onClick={handleSaveName}
                       disabled={saving}
-                      className="flex-1 py-2 bg-green-500 text-white rounded-lg flex justify-center items-center hover:bg-green-600 transition-colors"
+                      className="flex-1 py-2 bg-green-500 text-white rounded-lg flex justify-center hover:bg-green-600 transition-colors"
                     >
                       {saving ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
                     </button>
@@ -176,8 +132,6 @@ export default function ProfilePage() {
                       onClick={() => {
                         setIsEditing(false);
                         setNewName(userData.displayName);
-                        setNewPhone(userData.phone || "");
-                        setNewPhotoURL(userData.photoURL || "");
                       }}
                       className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-lg flex justify-center hover:bg-gray-200 transition-colors"
                     >
@@ -206,20 +160,34 @@ export default function ProfilePage() {
             <div className="w-full space-y-4 pt-4 border-t border-gray-100">
               <ContactRow icon={<Mail size={16} />} label="Email" value={userData?.email} />
               <ContactRow icon={<GraduationCap size={16} />} label="Dept" value={userData?.dept} />
-              <div className="flex items-center justify-between">
-                <ContactRow icon={<Phone size={16} />} label="WhatsApp" value={userData?.phone || "Not set"} />
-                <span className="text-[8px] font-black text-slate-400 border border-slate-200 px-1.5 py-0.5 rounded uppercase">Private</span>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Stats Section */}
+        {/* Stats and Info Section */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard icon={<Zap size={20} />} label="Impact Score" value={userData?.impactScore ?? 0} desc="Total XP earned" color="text-purple-600 bg-purple-100" />
-            <StatCard icon={<Trophy size={20} />} label="Global Rank" value={`#${userData?.globalRank || "--"}`} desc="Community standing" color="text-emerald-600 bg-emerald-100" />
-            <StatCard icon={<TrendingUp size={20} />} label="Tasks Done" value={userData?.tasksCompleted ?? 0} desc="Completed projects" color="text-blue-600 bg-blue-100" />
+            <StatCard
+              icon={<Zap size={20} />}
+              label="Impact Score"
+              value={userData?.impactScore ?? 0}
+              desc="Total XP earned"
+              color="text-purple-600 bg-purple-100"
+            />
+            <StatCard
+              icon={<Trophy size={20} />}
+              label="Global Rank"
+              value={`#${userData?.globalRank || "--"}`}
+              desc="Community standing"
+              color="text-emerald-600 bg-emerald-100"
+            />
+            <StatCard
+              icon={<TrendingUp size={20} />}
+              label="Tasks Done"
+              value={userData?.tasksCompleted ?? 0}
+              desc="Completed projects"
+              color="text-blue-600 bg-blue-100"
+            />
           </div>
 
           <div className="bg-white/60 backdrop-blur-md border border-white/80 p-6 rounded-[2rem] shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 group hover:border-purple-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-default">
@@ -229,12 +197,14 @@ export default function ProfilePage() {
               </div>
               <div>
                 <h4 className="text-base font-bold text-gray-900 tracking-tight">Level up your profile</h4>
-                <p className="text-xs text-gray-500 max-w-xs leading-relaxed">Unlock hidden statistics and climb the global ranks by finishing tasks from the community.</p>
+                <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
+                  Unlock hidden statistics and climb the global ranks by finishing tasks from the community.
+                </p>
               </div>
             </div>
 
             <Link href="/dashboard/tasks" className="w-full md:w-auto">
-              <button className="w-full px-6 py-3 bg-purple-600 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-purple-700 transition-all shadow-md">
+              <button className="w-full px-6 py-3 bg-purple-600 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-purple-700 hover:gap-3 transition-all shadow-md active:scale-95">
                 Browse Tasks
               </button>
             </Link>
@@ -245,7 +215,10 @@ export default function ProfilePage() {
   );
 }
 
-// Sub-components
+// ----------------------------------------------------
+// HELPER COMPONENTS (Maintained)
+// ----------------------------------------------------
+
 function ContactRow({ icon, label, value }) {
   return (
     <div className="flex items-center gap-3 group/row transition-all duration-200 hover:pl-1">

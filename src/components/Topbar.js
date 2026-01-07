@@ -6,7 +6,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
 export default function Topbar({ title = "Dashboard", setMobileOpen }) {
-  const [user, setUser] = useState({ displayName: "Loading...", role: "Student" });
+  const [user, setUser] = useState({ displayName: "Loading...", role: "Student", photoURL: null });
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
@@ -17,17 +17,25 @@ export default function Topbar({ title = "Dashboard", setMobileOpen }) {
           const userSnap = await getDoc(userRef);
 
           if (userSnap.exists()) {
-            // We merge the Firestore data with the Auth photoURL
+            const firestoreData = userSnap.data();
             setUser({
-              ...userSnap.data(),
-              photoURL: authUser.photoURL // Google provides this automatically
+              ...firestoreData,
+              // ✅ Corrected: If Firestore has a photo, use it. Else use Google's.
+              photoURL: firestoreData.photoURL || authUser.photoURL 
+            });
+          } else {
+            // Fallback for users not yet in Firestore
+            setUser({
+              displayName: authUser.displayName,
+              role: "Student",
+              photoURL: authUser.photoURL
             });
           }
         } catch (error) {
           console.error("Topbar Error:", error);
         }
       } else {
-        setUser({ displayName: "Guest", role: "Visitor" });
+        setUser({ displayName: "Guest", role: "Visitor", photoURL: null });
       }
     });
 
@@ -64,7 +72,6 @@ export default function Topbar({ title = "Dashboard", setMobileOpen }) {
           <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
         </button>
 
-        {/* User Profile Pill */}
         <div className="flex items-center gap-3 pl-3 md:pl-6 border-l border-gray-200">
           <div className="text-right hidden sm:block">
             <p className="text-sm font-bold text-gray-800">
@@ -74,14 +81,14 @@ export default function Topbar({ title = "Dashboard", setMobileOpen }) {
           </div>
           
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-500 shadow-lg flex items-center justify-center text-white font-bold overflow-hidden border-2 border-white">
-             {/* 🖼️ THE REINFORCED IMAGE LOGIC */}
              {user.photoURL && !imgError ? (
                <img 
+                 key={user.photoURL} // ⚡ Forces re-render when URL changes
                  src={user.photoURL} 
                  alt="Profile" 
-                 referrerPolicy="no-referrer" // 🛡️ Fixes Google image "403 Forbidden" errors
+                 referrerPolicy="no-referrer" 
                  className="w-full h-full object-cover"
-                 onError={() => setImgError(true)} // If image fails, switch to Initial
+                 onError={() => setImgError(true)} 
                />
              ) : (
                <span className="text-lg">{user.displayName?.charAt(0) || "U"}</span>
