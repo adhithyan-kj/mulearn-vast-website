@@ -55,9 +55,8 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
         </div>
 
         <nav className="flex-grow px-6 space-y-2">
-          <NavItem href="/dashboard" icon={<LayoutDashboard size={20} />} label="Dashboard" active={isActive("/dashboard")} onClick={() => setMobileOpen(false)} />
-          <NavItem href="/dashboard/tasks" icon={<ListChecks size={20} />} label="Task Library" active={isActive("/dashboard/tasks")} onClick={() => setMobileOpen(false)} />
           <NavItem href="/dashboard/profile" icon={<User size={20} />} label="Profile" active={isActive("/dashboard/profile")} onClick={() => setMobileOpen(false)} />
+          <NavItem href="/dashboard/tasks" icon={<ListChecks size={20} />} label="Task Library" active={isActive("/dashboard/tasks")} onClick={() => setMobileOpen(false)} />
           <NavItem href="/dashboard/leaderboard" icon={<Trophy size={20} />} label="Leaderboard" active={isActive("/dashboard/leaderboard")} onClick={() => setMobileOpen(false)} />
         </nav>
 
